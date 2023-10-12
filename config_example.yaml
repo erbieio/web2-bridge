@@ -1,0 +1,12 @@
+ServerConfig:
+  RunMode: info
+  LogOut: stdout
+TwitterConfig:
+  OauthToken: ''
+  OauthTokenSecret: ''
+  ApiKey: ''
+  ApiKeySecret: ''
+  Bearer: ''
+DiscordConfig:
+  BotToken: ''
+
