@@ -4,6 +4,7 @@ go 1.21.0
 
 require (
 	github.com/bwmarrin/discordgo v0.27.1
+	github.com/ethereum/go-ethereum v1.13.3
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/go-sql-driver/mysql v1.7.1
