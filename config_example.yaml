@@ -9,4 +9,6 @@ TwitterConfig:
   Bearer: ''
 DiscordConfig:
   BotToken: ''
-
+IpfsConfig:
+  Api: ''
+  HttpGateway: ''

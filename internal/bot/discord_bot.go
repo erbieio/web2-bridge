@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
@@ -8,6 +9,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/erbieio/web2-bridge/config"
 	"github.com/erbieio/web2-bridge/utils/discord"
+	"github.com/erbieio/web2-bridge/utils/ipfs"
 	"github.com/erbieio/web2-bridge/utils/logger"
 	"github.com/sirupsen/logrus"
 )
@@ -21,7 +23,7 @@ func (bot *DiscordBot) App() string {
 }
 
 func (bot *DiscordBot) Do() error {
-	discord, err := discord.NewBot(config.GetDiscordConfig().BotToken, discordgo.IntentsGuildMessages, bot.MessageHandler)
+	discord, err := discord.NewBot(config.GetDiscordConfig().BotToken, discordgo.IntentsGuildMessages|discordgo.IntentDirectMessages, bot.CommandHandler)
 	if err != nil {
 		logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("discord NewBot error")
 		return err
@@ -30,6 +32,60 @@ func (bot *DiscordBot) Do() error {
 	if err != nil {
 		logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("discord bot error")
 		return err
+	}
+	commands := []*discordgo.ApplicationCommand{
+		{
+			Name:        "mint_nft",
+			Description: "mint nft on erbie chain",
+			Options: []*discordgo.ApplicationCommandOption{
+
+				{
+					Type:        discordgo.ApplicationCommandOptionAttachment,
+					Name:        "image",
+					Description: "NFT image",
+					Required:    true,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "name",
+					Description: "NFT name",
+					Required:    true,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "description",
+					Description: "NFT description",
+					Required:    true,
+				},
+			},
+		},
+		{
+			Name:        "transfer_nft",
+			Description: "transfer your nft",
+			Options: []*discordgo.ApplicationCommandOption{
+
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "token-id",
+					Description: "nft id",
+					Required:    true,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "to",
+					Description: "to address",
+					Required:    true,
+				},
+			},
+		},
+	}
+	registeredCommands := make([]*discordgo.ApplicationCommand, len(commands))
+	for i, v := range commands {
+		cmd, err := discord.ApplicationCommandCreate(discord.State.User.ID, "", v)
+		if err != nil {
+			logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("create discord command error")
+		}
+		registeredCommands[i] = cmd
 	}
 	return nil
 }
@@ -68,4 +124,51 @@ func (bot *DiscordBot) MessageHandler(s *discordgo.Session, m *discordgo.Message
 		logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("discord bot send message error")
 	}
 
+}
+
+func (bot *DiscordBot) CommandHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	commandHandlers := map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
+		"mint_nft": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			options := i.ApplicationCommandData().Options
+
+			optionMap := make(map[string]*discordgo.ApplicationCommandInteractionDataOption, len(options))
+			for _, opt := range options {
+				optionMap[opt.Name] = opt
+			}
+			type meta struct {
+				Name        string `json:"name"`
+				Description string `json:"description"`
+				Image       string `json:"image"`
+			}
+			metaStruct := meta{}
+			imageID := optionMap["image"].Value.(string)
+			metaStruct.Image = i.ApplicationCommandData().Resolved.Attachments[imageID].URL
+			if option, ok := optionMap["name"]; ok {
+				metaStruct.Name = option.StringValue()
+			}
+			if option, ok := optionMap["description"]; ok {
+				metaStruct.Description = option.StringValue()
+			}
+			ipfsClient := ipfs.NewClient(config.GetIpfsConfig().Api)
+
+			metaStr, _ := json.Marshal(metaStruct)
+			cid, err := ipfsClient.Add(strings.NewReader(string(metaStr)))
+			if err != nil {
+				logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("upload ipfs error")
+				return
+			}
+			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: cid,
+				},
+			})
+			if err != nil {
+				logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("command handler error")
+			}
+		},
+	}
+	if h, ok := commandHandlers[i.ApplicationCommandData().Name]; ok {
+		h(s, i)
+	}
 }

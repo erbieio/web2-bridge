@@ -72,6 +72,11 @@ type DiscordConfig struct {
 	BotToken string
 }
 
+type IpfsConfig struct {
+	Api         string
+	HttpGateway string
+}
+
 // struct decode must has tag
 type Config struct {
 	ServerConf  ServerConfig  `toml:"ServerConfig" mapstructure:"ServerConfig"`
@@ -79,6 +84,7 @@ type Config struct {
 	RedisConf   RedisConfig   `toml:"RedisConfig" mapstructure:"RedisConfig"`
 	TwitterConf TwitterConfig `toml:"TwitterConfig" mapstructure:"TwitterConfig"`
 	DiscordConf DiscordConfig `toml:"DiscordConfig" mapstructure:"DiscordConfig"`
+	IpfsConf    IpfsConfig    `toml:"IpfsConfig" mapstructure:"IpfsConfig"`
 }
 
 var (
@@ -178,6 +184,12 @@ func GetDiscordConfig() DiscordConfig {
 	configMutex.RLock()
 	defer configMutex.RUnlock()
 	return config.DiscordConf
+}
+
+func GetIpfsConfig() IpfsConfig {
+	configMutex.RLock()
+	defer configMutex.RUnlock()
+	return config.IpfsConf
 }
 
 // check if logout equal file
