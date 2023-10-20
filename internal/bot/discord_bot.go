@@ -1,13 +1,15 @@
 package bot
 
 import (
-	"encoding/json"
 	"fmt"
+	"net/http"
 	"regexp"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/erbieio/web2-bridge/config"
+	"github.com/erbieio/web2-bridge/internal/model"
+	"github.com/erbieio/web2-bridge/utils/db/mysql"
 	"github.com/erbieio/web2-bridge/utils/discord"
 	"github.com/erbieio/web2-bridge/utils/ipfs"
 	"github.com/erbieio/web2-bridge/utils/logger"
@@ -45,18 +47,6 @@ func (bot *DiscordBot) Do() error {
 					Description: "NFT image",
 					Required:    true,
 				},
-				{
-					Type:        discordgo.ApplicationCommandOptionString,
-					Name:        "name",
-					Description: "NFT name",
-					Required:    true,
-				},
-				{
-					Type:        discordgo.ApplicationCommandOptionString,
-					Name:        "description",
-					Description: "NFT description",
-					Required:    true,
-				},
 			},
 		},
 		{
@@ -77,6 +67,10 @@ func (bot *DiscordBot) Do() error {
 					Required:    true,
 				},
 			},
+		},
+		{
+			Name:        "owned_nft",
+			Description: "list your nft",
 		},
 	}
 	registeredCommands := make([]*discordgo.ApplicationCommand, len(commands))
@@ -106,7 +100,7 @@ func (bot *DiscordBot) MessageHandler(s *discordgo.Session, m *discordgo.Message
 
 	msg, err := bot.Handler(InputMessage{
 		App:       bot.App(),
-		AuthorId:  fmt.Sprintf("%s/%s", bot.App(), m.Author.ID),
+		AuthorId:  fmt.Sprintf("%s::%s", bot.App(), m.Author.ID),
 		MessageId: fmt.Sprintf("%s/%s", m.ChannelID, m.ID),
 		Action:    regArry[0],
 		Params:    regArry[1:],
@@ -138,11 +132,16 @@ func (bot *DiscordBot) CommandHandler(s *discordgo.Session, i *discordgo.Interac
 			type meta struct {
 				Name        string `json:"name"`
 				Description string `json:"description"`
-				Image       string `json:"image"`
+				Image       string `json:"meta_url"`
 			}
 			metaStruct := meta{}
 			imageID := optionMap["image"].Value.(string)
-			metaStruct.Image = i.ApplicationCommandData().Resolved.Attachments[imageID].URL
+			imageUrl := i.ApplicationCommandData().Resolved.Attachments[imageID].URL
+			resp, err := http.DefaultClient.Get(imageUrl)
+			if err != nil {
+				logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("download image error")
+				return
+			}
 			if option, ok := optionMap["name"]; ok {
 				metaStruct.Name = option.StringValue()
 			}
@@ -151,21 +150,116 @@ func (bot *DiscordBot) CommandHandler(s *discordgo.Session, i *discordgo.Interac
 			}
 			ipfsClient := ipfs.NewClient(config.GetIpfsConfig().Api)
 
-			metaStr, _ := json.Marshal(metaStruct)
-			cid, err := ipfsClient.Add(strings.NewReader(string(metaStr)))
+			imageCid, err := ipfsClient.Add(resp.Body)
 			if err != nil {
-				logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("upload ipfs error")
+				logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("upload image to ipfs error")
 				return
+			}
+			//metaStruct.Image = config.GetIpfsConfig().HttpGateway + imageCid
+			//metaStr, _ := json.Marshal(metaStruct)
+			//cid, err := ipfsClient.Add(strings.NewReader(string(metaStr)))
+			//if err != nil {
+			//	logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("upload ipfs error")
+			//	return
+			//}
+			authorId := ""
+			if i.Member != nil {
+				authorId = i.Member.User.ID
+			} else if i.User != nil {
+				authorId = i.User.ID
+			} else {
+				logger.Logrus.WithFields(logrus.Fields{"discordBody": i}).Error("discord cannot get author id")
+				return
+			}
+			outMsg, err := bot.Handler(InputMessage{
+				App:       bot.App(),
+				AuthorId:  fmt.Sprintf("%s::%s", bot.App(), authorId),
+				MessageId: fmt.Sprintf("%s/%s", i.ChannelID, i.ID),
+				Action:    ActionMintNft,
+				Params:    []string{config.GetIpfsConfig().HttpGateway + imageCid},
+			})
+			if err != nil {
+				logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("handle message error")
 			}
 			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Content: cid,
+					Content: outMsg.Message,
 				},
 			})
 			if err != nil {
 				logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("command handler error")
 			}
+		},
+		"transfer_nft": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			options := i.ApplicationCommandData().Options
+
+			optionMap := make(map[string]*discordgo.ApplicationCommandInteractionDataOption, len(options))
+			for _, opt := range options {
+				optionMap[opt.Name] = opt
+			}
+			tokenId := ""
+			if option, ok := optionMap["token-id"]; ok {
+				tokenId = option.StringValue()
+			}
+			to := ""
+			if option, ok := optionMap["to"]; ok {
+				to = option.StringValue()
+			}
+			authorId := ""
+			if i.Member != nil {
+				authorId = i.Member.User.ID
+			} else if i.User != nil {
+				authorId = i.User.ID
+			} else {
+				logger.Logrus.WithFields(logrus.Fields{"discordBody": i}).Error("discord cannot get author id")
+				return
+			}
+			outMsg, err := bot.Handler(InputMessage{
+				App:       bot.App(),
+				AuthorId:  fmt.Sprintf("%s::%s", bot.App(), authorId),
+				MessageId: fmt.Sprintf("%s/%s", i.ChannelID, i.ID),
+				Action:    ActionTransferNft,
+				Params:    []string{tokenId, to},
+			})
+			if err != nil {
+				logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("handle message error")
+			}
+			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: outMsg.Message,
+				},
+			})
+		},
+		"owned_nft": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			authorId := ""
+			if i.Member != nil {
+				authorId = i.Member.User.ID
+			} else if i.User != nil {
+				authorId = i.User.ID
+			} else {
+				logger.Logrus.WithFields(logrus.Fields{"discordBody": i}).Error("discord cannot get author id")
+				return
+			}
+			nfts := make([]*model.FreeNft, 0)
+			err := mysql.GetDB().Model(&model.FreeNft{}).Where("creator = ? and mint_status = ? and transfer_status != ?", fmt.Sprintf("%s::%s", bot.App(), authorId), model.TxStatusSuccess, model.TxStatusSuccess).Find(&nfts).Error
+			if err != nil {
+				logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("db error")
+				return
+			}
+			ownedTokenIds := make([]string, 0)
+			for _, v := range nfts {
+				ownedTokenIds = append(ownedTokenIds, v.TokenId)
+			}
+			tokenIdStr := strings.Join(ownedTokenIds, ",")
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "Your Nft List: " + tokenIdStr,
+				},
+			})
+
 		},
 	}
 	if h, ok := commandHandlers[i.ApplicationCommandData().Name]; ok {

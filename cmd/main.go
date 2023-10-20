@@ -10,6 +10,8 @@ import (
 	"github.com/erbieio/web2-bridge/config"
 	"github.com/erbieio/web2-bridge/internal/bot"
 	"github.com/erbieio/web2-bridge/internal/chain"
+	"github.com/erbieio/web2-bridge/internal/jobs"
+	"github.com/erbieio/web2-bridge/utils/db/mysql"
 	_ "github.com/erbieio/web2-bridge/utils/db/mysql"
 	"github.com/erbieio/web2-bridge/utils/logger"
 
@@ -59,21 +61,23 @@ func run(cctx *cli.Context) {
 	//set log level
 	logger.SetLogLevel(serverConf.RunMode)
 
-	/* 	db := mysql.GetDB()
-	   	if db == nil {
-	   		logger.Logrus.Error("init db failed")
-	   		return
-	   	}
-
-	   	err = redis.InitRedis()
-	   	if err != nil {
-	   		logger.Logrus.Error("init redis failed")
-	   		return
-	   	} */
+	db := mysql.GetDB()
+	if db == nil {
+		logger.Logrus.Error("init db failed")
+		return
+	}
+	/*
+		err = redis.InitRedis()
+		if err != nil {
+			logger.Logrus.Error("init redis failed")
+			return
+		} */
 
 	botFactory := bot.GetFacotory()
 	botFactory.Register(&bot.DiscordBot{Handler: chain.MessageHandler})
 	botFactory.Do()
+
+	jobs.Do()
 
 	quit := make(chan os.Signal)
 	// kill (no param) default send syscall.SIGTERM

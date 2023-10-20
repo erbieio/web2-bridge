@@ -77,6 +77,11 @@ type IpfsConfig struct {
 	HttpGateway string
 }
 
+type ChainConfig struct {
+	Rpc          string
+	NftAdminPriv string
+}
+
 // struct decode must has tag
 type Config struct {
 	ServerConf  ServerConfig  `toml:"ServerConfig" mapstructure:"ServerConfig"`
@@ -85,6 +90,7 @@ type Config struct {
 	TwitterConf TwitterConfig `toml:"TwitterConfig" mapstructure:"TwitterConfig"`
 	DiscordConf DiscordConfig `toml:"DiscordConfig" mapstructure:"DiscordConfig"`
 	IpfsConf    IpfsConfig    `toml:"IpfsConfig" mapstructure:"IpfsConfig"`
+	ChainConf   ChainConfig   `toml:"ChainConfig" mapstructure:"ChainConfig"`
 }
 
 var (
@@ -190,6 +196,12 @@ func GetIpfsConfig() IpfsConfig {
 	configMutex.RLock()
 	defer configMutex.RUnlock()
 	return config.IpfsConf
+}
+
+func GetChainConfig() ChainConfig {
+	configMutex.RLock()
+	defer configMutex.RUnlock()
+	return config.ChainConf
 }
 
 // check if logout equal file
