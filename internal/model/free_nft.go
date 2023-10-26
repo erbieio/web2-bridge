@@ -10,6 +10,8 @@ const (
 
 type FreeNft struct {
 	Id             int       `gorm:"column:id;primary_key;AUTO_INCREMENT"`
+	App            string    `gorm:"column:app;NOT NULL"`                       // appname
+	MintChannelId  string    `gorm:"column:mint_channel_id;NOT NULL"`           // mint消息channelid
 	MintTxHash     string    `gorm:"column:mint_tx_hash;NOT NULL"`              // mint交易hash
 	Creator        string    `gorm:"column:creator;NOT NULL"`                   // nft创建人标识
 	TokenId        string    `gorm:"column:token_id;NOT NULL"`                  // nft唯一标识

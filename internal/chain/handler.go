@@ -9,11 +9,14 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/rpc"
+
 	"github.com/erbieio/web2-bridge/config"
 	"github.com/erbieio/web2-bridge/internal/bot"
 	"github.com/erbieio/web2-bridge/internal/model"
 	"github.com/erbieio/web2-bridge/utils/db/mysql"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -30,9 +33,16 @@ func MessageHandler(in bot.InputMessage) (bot.OutputMessage, error) {
 				Message: "Mint nft failed due to chain network error",
 			}, err
 		}
+		messageInfo := strings.Split(in.MessageId, "/")
+		channelId := ""
+		if len(messageInfo) == 2 {
+			channelId = messageInfo[0]
+		}
 		nft := model.FreeNft{
-			MintTxHash: tx,
-			Creator:    in.AuthorId,
+			App:           in.App,
+			MintTxHash:    tx,
+			Creator:       in.AuthorId,
+			MintChannelId: channelId,
 		}
 		err = mysql.GetDB().Model(&model.FreeNft{}).Create(&nft).Error
 		if err != nil {
@@ -241,4 +251,40 @@ func GetTxReceipt(nodeUrl string, txhash string) (*types.Receipt, error) {
 	}
 
 	return receipt, nil
+}
+
+func GetAccountInfo(nodeUrl string, nftaddr common.Address, blockNumber *big.Int) (*Account, error) {
+	client, err := rpc.Dial(nodeUrl)
+	if err != nil {
+		return nil, err
+	}
+	defer client.Close()
+	var result Account
+	err = client.CallContext(context.Background(), &result, "eth_getAccountInfo", nftaddr, toBlockNumArg(blockNumber))
+	if err != nil {
+		return nil, err
+	}
+	return &result, err
+}
+
+func GetNftMetaUrl(nodeUrl string, nftaddr common.Address, blockNumber *big.Int) string {
+	nft, err := GetAccountInfo(nodeUrl, nftaddr, blockNumber)
+	if err != nil {
+		return ""
+	}
+	if nft.Nft != nil {
+		return nft.Nft.MetaURL
+	}
+	return ""
+}
+
+func toBlockNumArg(number *big.Int) string {
+	if number == nil {
+		return "latest"
+	}
+	pending := big.NewInt(-1)
+	if number.Cmp(pending) == 0 {
+		return "pending"
+	}
+	return hexutil.EncodeBig(number)
 }

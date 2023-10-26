@@ -5,15 +5,20 @@ go 1.21.0
 require (
 	github.com/bwmarrin/discordgo v0.27.1
 	github.com/ethereum/go-ethereum v1.13.4
+	github.com/fogleman/gg v1.3.0
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/ipfs/go-ipfs-api v0.7.0
 	github.com/michimani/gotwi v0.14.0
+	github.com/noelyahan/impexp v0.0.0-20201209034304-ee159d84b42f
+	github.com/noelyahan/mergi v0.0.0-20190514155713-69271a4267fb
+	github.com/noelyahan/mergitrans v0.0.0-20190507035323-73e76dcd7d2a
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/viper v1.17.0
 	github.com/urfave/cli v1.22.14
 	golang.org/x/crypto v0.14.0
+	golang.org/x/image v0.13.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gorm.io/driver/mysql v1.5.1
 	gorm.io/gorm v1.25.4
@@ -39,6 +44,7 @@ require (
 	github.com/frankban/quicktest v1.14.6 // indirect
 	github.com/go-ole/go-ole v1.2.5 // indirect
 	github.com/go-stack/stack v1.8.1 // indirect
+	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/holiman/uint256 v1.2.3 // indirect
@@ -64,6 +70,7 @@ require (
 	github.com/multiformats/go-multihash v0.2.3 // indirect
 	github.com/multiformats/go-multistream v0.4.1 // indirect
 	github.com/multiformats/go-varint v0.0.7 // indirect
+	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect

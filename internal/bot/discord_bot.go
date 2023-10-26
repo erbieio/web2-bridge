@@ -30,6 +30,7 @@ func (bot *DiscordBot) Do() error {
 		logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("discord NewBot error")
 		return err
 	}
+
 	err = discord.Open()
 	if err != nil {
 		logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("discord bot error")
@@ -173,7 +174,7 @@ func (bot *DiscordBot) CommandHandler(s *discordgo.Session, i *discordgo.Interac
 			}
 			outMsg, err := bot.Handler(InputMessage{
 				App:       bot.App(),
-				AuthorId:  fmt.Sprintf("%s::%s", bot.App(), authorId),
+				AuthorId:  authorId,
 				MessageId: fmt.Sprintf("%s/%s", i.ChannelID, i.ID),
 				Action:    ActionMintNft,
 				Params:    []string{config.GetIpfsConfig().HttpGateway + imageCid},
@@ -217,7 +218,7 @@ func (bot *DiscordBot) CommandHandler(s *discordgo.Session, i *discordgo.Interac
 			}
 			outMsg, err := bot.Handler(InputMessage{
 				App:       bot.App(),
-				AuthorId:  fmt.Sprintf("%s::%s", bot.App(), authorId),
+				AuthorId:  authorId,
 				MessageId: fmt.Sprintf("%s/%s", i.ChannelID, i.ID),
 				Action:    ActionTransferNft,
 				Params:    []string{tokenId, to},
@@ -243,7 +244,7 @@ func (bot *DiscordBot) CommandHandler(s *discordgo.Session, i *discordgo.Interac
 				return
 			}
 			nfts := make([]*model.FreeNft, 0)
-			err := mysql.GetDB().Model(&model.FreeNft{}).Where("creator = ? and mint_status = ? and transfer_status != ?", fmt.Sprintf("%s::%s", bot.App(), authorId), model.TxStatusSuccess, model.TxStatusSuccess).Find(&nfts).Error
+			err := mysql.GetDB().Model(&model.FreeNft{}).Where("creator = ? and mint_status = ? and transfer_status != ?", authorId, model.TxStatusSuccess, model.TxStatusSuccess).Find(&nfts).Error
 			if err != nil {
 				logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("db error")
 				return
@@ -256,7 +257,7 @@ func (bot *DiscordBot) CommandHandler(s *discordgo.Session, i *discordgo.Interac
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Content: "Your Nft List: " + tokenIdStr,
+					Content: "Your nft list: " + tokenIdStr,
 				},
 			})
 

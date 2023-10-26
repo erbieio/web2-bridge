@@ -1,13 +1,19 @@
 package jobs
 
 import (
+	"bytes"
+	"fmt"
+	"image/gif"
 	"strings"
 	"time"
 
+	"github.com/bwmarrin/discordgo"
 	"github.com/erbieio/web2-bridge/config"
 	"github.com/erbieio/web2-bridge/internal/chain"
 	"github.com/erbieio/web2-bridge/internal/model"
 	"github.com/erbieio/web2-bridge/utils/db/mysql"
+	"github.com/erbieio/web2-bridge/utils/discord"
+	"github.com/erbieio/web2-bridge/utils/imageconv"
 	"github.com/erbieio/web2-bridge/utils/logger"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -15,6 +21,7 @@ import (
 )
 
 func HandleMintReceipt() {
+	discord, _ := discord.NewBot(config.GetDiscordConfig().BotToken, discordgo.IntentsGuildMessages|discordgo.IntentDirectMessages)
 	tick := time.Tick(time.Second * 2)
 	for range tick {
 		nfts := make([]*model.FreeNft, 0)
@@ -44,10 +51,39 @@ func HandleMintReceipt() {
 					logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("update mint status error")
 					continue
 				}
+				go replyDiscordMessage(discord, tokenId, v.MintChannelId, v.Creator)
 			}
 
 		}
 	}
+}
+
+func replyDiscordMessage(discord *discordgo.Session, tokenId string, channelId string, creatorId string) {
+	metaUrl := chain.GetNftMetaUrl(config.GetChainConfig().Rpc, common.HexToAddress(tokenId), nil)
+	if metaUrl == "" {
+		return
+	}
+	anim, err := imageconv.InkEffect(metaUrl)
+	if err != nil {
+		logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("generate gif error")
+		return
+	}
+	gifBuffer := bytes.NewBuffer([]byte{})
+	err = gif.EncodeAll(gifBuffer, &anim)
+	if err != nil {
+		logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("encode gif error")
+		return
+	}
+	payloald := discordgo.MessageSend{}
+	payloald.Content = fmt.Sprintf("<@%s> Your nft token id is:%s.Author: <@%s>", creatorId, tokenId, creatorId)
+	payloald.Files = []*discordgo.File{
+		{
+			Name:        "image.gif",
+			ContentType: "gif",
+			Reader:      gifBuffer,
+		},
+	}
+	discord.ChannelMessageSendComplex(channelId, &payloald)
 }
 
 func HandleTransferReceipt() {
