@@ -244,7 +244,7 @@ func (bot *DiscordBot) CommandHandler(s *discordgo.Session, i *discordgo.Interac
 				return
 			}
 			nfts := make([]*model.FreeNft, 0)
-			err := mysql.GetDB().Model(&model.FreeNft{}).Where("creator = ? and mint_status = ? and transfer_status != ?", authorId, model.TxStatusSuccess, model.TxStatusSuccess).Find(&nfts).Error
+			err := mysql.GetDB().Model(&model.FreeNft{}).Where("creator = ? and mint_status = ? and transfer_status != ?", authorId, model.TxStatusSuccess, model.TxStatusSuccess).Limit(1000).Find(&nfts).Error
 			if err != nil {
 				logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("db error")
 				return
