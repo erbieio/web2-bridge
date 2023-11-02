@@ -82,6 +82,10 @@ type ChainConfig struct {
 	NftAdminPriv string
 }
 
+type GradioConfig struct {
+	Url string
+}
+
 // struct decode must has tag
 type Config struct {
 	ServerConf  ServerConfig  `toml:"ServerConfig" mapstructure:"ServerConfig"`
@@ -91,6 +95,7 @@ type Config struct {
 	DiscordConf DiscordConfig `toml:"DiscordConfig" mapstructure:"DiscordConfig"`
 	IpfsConf    IpfsConfig    `toml:"IpfsConfig" mapstructure:"IpfsConfig"`
 	ChainConf   ChainConfig   `toml:"ChainConfig" mapstructure:"ChainConfig"`
+	GradioConf  GradioConfig  `toml:"GradioConfig" mapstructure:"GradioConfig"`
 }
 
 var (
@@ -202,6 +207,12 @@ func GetChainConfig() ChainConfig {
 	configMutex.RLock()
 	defer configMutex.RUnlock()
 	return config.ChainConf
+}
+
+func GetGradioConfig() GradioConfig {
+	configMutex.RLock()
+	defer configMutex.RUnlock()
+	return config.GradioConf
 }
 
 // check if logout equal file

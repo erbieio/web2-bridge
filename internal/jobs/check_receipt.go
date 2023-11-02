@@ -1,9 +1,7 @@
 package jobs
 
 import (
-	"bytes"
 	"fmt"
-	"image/gif"
 	"strings"
 	"time"
 
@@ -13,7 +11,7 @@ import (
 	"github.com/erbieio/web2-bridge/internal/model"
 	"github.com/erbieio/web2-bridge/utils/db/mysql"
 	"github.com/erbieio/web2-bridge/utils/discord"
-	"github.com/erbieio/web2-bridge/utils/imageconv"
+	"github.com/erbieio/web2-bridge/utils/gradio"
 	"github.com/erbieio/web2-bridge/utils/logger"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -63,24 +61,18 @@ func replyDiscordMessage(discord *discordgo.Session, tokenId string, channelId s
 	if metaUrl == "" {
 		return
 	}
-	anim, err := imageconv.InkEffect(metaUrl)
+	vedioBuffer, err := gradio.Image2Vedio(metaUrl)
 	if err != nil {
 		logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("generate gif error")
-		return
-	}
-	gifBuffer := bytes.NewBuffer([]byte{})
-	err = gif.EncodeAll(gifBuffer, &anim)
-	if err != nil {
-		logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("encode gif error")
 		return
 	}
 	payloald := discordgo.MessageSend{}
 	payloald.Content = fmt.Sprintf("<@%s> Your nft id is:%s.Author: <@%s>", creatorId, tokenId, creatorId)
 	payloald.Files = []*discordgo.File{
 		{
-			Name:        "image.gif",
-			ContentType: "gif",
-			Reader:      gifBuffer,
+			Name:        "vedio.mp4",
+			ContentType: "mp4",
+			Reader:      vedioBuffer,
 		},
 	}
 	discord.ChannelMessageSendComplex(channelId, &payloald)

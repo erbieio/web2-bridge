@@ -12,3 +12,8 @@ DiscordConfig:
 IpfsConfig:
   Api: ''
   HttpGateway: ''
+ChainConfig:
+  Rpc: 'https://api.erbie.io/'
+  NftAdminPriv: ''
+GradioConfig:
+  Url: ''
