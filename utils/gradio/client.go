@@ -7,12 +7,15 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"strings"
 
 	"github.com/erbieio/web2-bridge/config"
 )
+
+var nagativePrompts = "worst quality, normal quality, low quality, low res, blurry, text, watermark, logo, banner, extra digits, cropped, jpeg artifacts, signature, username, error, sketch ,duplicate, ugly, monochrome, horror, geometry, mutation, disgusting"
 
 func Image2Vedio(path string) (io.Reader, error) {
 	errMsg := fmt.Sprintf("gradio can't find the file or file is invalid %s", path)
@@ -89,4 +92,96 @@ func isValidURL(toTest string) bool {
 		return false
 	}
 	return true
+}
+
+func Description2Prompts(desp string) (string, error) {
+	params := DescriptionToPromptsReq{
+		Data:    []string{desp},
+		FnIndex: 3,
+	}
+	bodyJson, _ := json.Marshal(params)
+	req, err := http.NewRequest("POST", config.GetGradioConfig().Url+"api/predict", bytes.NewBuffer(bodyJson))
+	if err != nil {
+		return "", err
+	}
+	client := &http.Client{}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	toPromptResp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer toPromptResp.Body.Close()
+	b, err := io.ReadAll(toPromptResp.Body)
+	if err != nil {
+		return "", err
+	}
+	if toPromptResp.StatusCode != 200 {
+		return "", errors.New(string(b))
+	}
+	vBody := &DescriptionToPrompts{}
+	err = json.Unmarshal(b, vBody)
+	if err != nil {
+		return "", err
+	}
+	if len(vBody.Data) == 0 {
+		return "", errors.New("empty prompts generated")
+	}
+	return vBody.Data[0], nil
+
+}
+
+func Prompts2Image(prompts string) ([]byte, string, error) {
+	seed := rand.Intn(1000000000000000000)
+	params := PromptsToImageReq{
+		Data:    []interface{}{prompts, nagativePrompts, 512, 512, 10, 50, seed},
+		FnIndex: 5,
+	}
+	bodyJson, _ := json.Marshal(params)
+	req, err := http.NewRequest("POST", config.GetGradioConfig().Url+"api/predict", bytes.NewBuffer(bodyJson))
+	if err != nil {
+		return nil, "", err
+	}
+	client := &http.Client{}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	toImageResp, err := client.Do(req)
+	if err != nil {
+		return nil, "", err
+	}
+	defer toImageResp.Body.Close()
+	b, err := io.ReadAll(toImageResp.Body)
+	if err != nil {
+		return nil, "", err
+	}
+	if toImageResp.StatusCode != 200 {
+		return nil, "", errors.New(string(b))
+	}
+	vBody := &PromptsToImage{}
+	err = json.Unmarshal(b, vBody)
+	if err != nil {
+		return nil, "", err
+	}
+	if len(vBody.Data) == 0 {
+		return nil, "", errors.New("empty image generated")
+	}
+	imageB64 := vBody.Data[0]
+	prefix := "image/"
+	suffix := ";base64"
+	start := strings.Index(imageB64, prefix)
+	if start < 0 {
+		return nil, "", errors.New("unknown image format")
+	}
+	start += len(prefix)
+	end := strings.Index(imageB64[start:], suffix)
+	if end < 0 {
+		return nil, "", errors.New("unknown image format")
+	}
+	ext := imageB64[start : start+end]
+	imageBytes, err := base64.StdEncoding.DecodeString(imageB64[strings.IndexByte(imageB64, ',')+1:])
+
+	return imageBytes, ext, err
+
 }

@@ -32,3 +32,50 @@ func TestImage2Vedio(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+func TestDescription2Prompts(t *testing.T) {
+	configPath := flag.String("config_path", "../../", "config file")
+	logicLogFile := flag.String("logic_log_file", "../../log/bridge.log", "logic log file")
+	flag.Parse()
+
+	//init logic logger
+	logger.Init(*logicLogFile)
+
+	//load config
+	config.LoadConf(*configPath)
+	prompts, err := gradio.Description2Prompts("一个女人坐在沙滩上")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	t.Log(prompts)
+}
+
+func TestPrompts2Image(t *testing.T) {
+	configPath := flag.String("config_path", "../../", "config file")
+	logicLogFile := flag.String("logic_log_file", "../../log/bridge.log", "logic log file")
+	flag.Parse()
+
+	//init logic logger
+	logger.Init(*logicLogFile)
+
+	//load config
+	config.LoadConf(*configPath)
+	imageBytes, ext, err := gradio.Prompts2Image("A woman sitting on the beach, detailed realism, soft lighting, 4k, with a calm and peaceful expression on her face, her long hair flowing in the ocean breeze")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	err = os.WriteFile("output."+ext, imageBytes, 0644)
+	if err != nil {
+		t.Error(err)
+	}
+}

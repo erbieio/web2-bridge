@@ -14,3 +14,17 @@ type FileBody struct {
 	Name     string      `json:"name"`
 	OrigName string      `json:"orig_name"`
 }
+
+type DescriptionToPrompts struct {
+	AverageDuration float64  `json:"average_duration"`
+	Data            []string `json:"data"`
+	Duration        float64  `json:"duration"`
+	IsGenerating    bool     `json:"is_generating"`
+}
+
+type PromptsToImage struct {
+	AverageDuration float64  `json:"average_duration"`
+	Data            []string `json:"data"`
+	Duration        float64  `json:"duration"`
+	IsGenerating    bool     `json:"is_generating"`
+}
