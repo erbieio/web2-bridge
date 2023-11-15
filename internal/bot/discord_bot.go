@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -11,6 +12,7 @@ import (
 	"github.com/erbieio/web2-bridge/internal/model"
 	"github.com/erbieio/web2-bridge/utils/db/mysql"
 	"github.com/erbieio/web2-bridge/utils/discord"
+	"github.com/erbieio/web2-bridge/utils/gradio"
 	"github.com/erbieio/web2-bridge/utils/ipfs"
 	"github.com/erbieio/web2-bridge/utils/logger"
 	"github.com/sirupsen/logrus"
@@ -46,7 +48,13 @@ func (bot *DiscordBot) Do() error {
 					Type:        discordgo.ApplicationCommandOptionAttachment,
 					Name:        "image",
 					Description: "NFT image",
-					Required:    true,
+					Required:    false,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "prompts",
+					Description: "image scenarioal description",
+					Required:    false,
 				},
 			},
 		},
@@ -136,26 +144,51 @@ func (bot *DiscordBot) CommandHandler(s *discordgo.Session, i *discordgo.Interac
 				Image       string `json:"meta_url"`
 			}
 			metaStruct := meta{}
-			imageID := optionMap["image"].Value.(string)
-			imageUrl := i.ApplicationCommandData().Resolved.Attachments[imageID].URL
-			resp, err := http.DefaultClient.Get(imageUrl)
-			if err != nil {
-				logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("download image error")
-				return
-			}
-			if option, ok := optionMap["name"]; ok {
-				metaStruct.Name = option.StringValue()
-			}
-			if option, ok := optionMap["description"]; ok {
-				metaStruct.Description = option.StringValue()
-			}
-			ipfsClient := ipfs.NewClient(config.GetIpfsConfig().Api)
 
-			imageCid, err := ipfsClient.Add(resp.Body)
-			if err != nil {
-				logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("upload image to ipfs error")
+			var imageCid string
+			if _, ok := optionMap["image"]; ok {
+				imageID := optionMap["image"].Value.(string)
+				imageUrl := i.ApplicationCommandData().Resolved.Attachments[imageID].URL
+				resp, err := http.DefaultClient.Get(imageUrl)
+				if err != nil {
+					logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("download image error")
+					return
+				}
+				if option, ok := optionMap["name"]; ok {
+					metaStruct.Name = option.StringValue()
+				}
+				if option, ok := optionMap["description"]; ok {
+					metaStruct.Description = option.StringValue()
+				}
+				ipfsClient := ipfs.NewClient(config.GetIpfsConfig().Api)
+
+				imageCid, err = ipfsClient.Add(resp.Body)
+				if err != nil {
+					logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("upload image to ipfs error")
+					return
+				}
+			} else if _, ok := optionMap["prompts"]; ok {
+				descrip := optionMap["prompts"].Value.(string)
+				prompts, err := gradio.Description2Prompts(descrip)
+				if err != nil {
+					logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("Description2Prompts error")
+					return
+				}
+				imageBytes, _, err := gradio.Prompts2Image(prompts)
+				if err != nil {
+					logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("Prompts2Image error")
+					return
+				}
+				ipfsClient := ipfs.NewClient(config.GetIpfsConfig().Api)
+				imageCid, err = ipfsClient.Add(bytes.NewBuffer(imageBytes))
+				if err != nil {
+					logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("upload image to ipfs error")
+					return
+				}
+			} else {
 				return
 			}
+
 			//metaStruct.Image = config.GetIpfsConfig().HttpGateway + imageCid
 			//metaStr, _ := json.Marshal(metaStruct)
 			//cid, err := ipfsClient.Add(strings.NewReader(string(metaStr)))
