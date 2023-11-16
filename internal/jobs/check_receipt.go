@@ -61,6 +61,7 @@ func replyDiscordMessage(discord *discordgo.Session, tokenId string, channelId s
 	if metaUrl == "" {
 		return
 	}
+	logger.Logrus.Info("start image to vedio: " + metaUrl)
 	vedioBuffer, err := gradio.Image2Vedio(metaUrl)
 	if err != nil {
 		logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("generate vedio error")

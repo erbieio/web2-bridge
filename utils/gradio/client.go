@@ -38,7 +38,7 @@ func Image2Vedio(path string) (io.Reader, error) {
 
 	params := ImageToVedioReq{
 		Data:    []string{imageBase64},
-		FnIndex: 9,
+		FnIndex: 8,
 	}
 	bodyJson, _ := json.Marshal(params)
 	req, err := http.NewRequest("POST", config.GetGradioConfig().Url+"api/predict", bytes.NewBuffer(bodyJson))
@@ -60,7 +60,7 @@ func Image2Vedio(path string) (io.Reader, error) {
 		return nil, err
 	}
 	if toVedioResp.StatusCode != 200 {
-		return nil, errors.New(string(b))
+		return nil, errors.New(toVedioResp.Status)
 	}
 	vBody := &ImageToVedio{}
 	err = json.Unmarshal(b, vBody)
