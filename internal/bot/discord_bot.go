@@ -138,87 +138,90 @@ func (bot *DiscordBot) CommandHandler(s *discordgo.Session, i *discordgo.Interac
 			for _, opt := range options {
 				optionMap[opt.Name] = opt
 			}
-			type meta struct {
-				Name        string `json:"name"`
-				Description string `json:"description"`
-				Image       string `json:"meta_url"`
-			}
-			metaStruct := meta{}
 
-			var imageCid string
-			if _, ok := optionMap["image"]; ok {
-				imageID := optionMap["image"].Value.(string)
-				imageUrl := i.ApplicationCommandData().Resolved.Attachments[imageID].URL
-				resp, err := http.DefaultClient.Get(imageUrl)
-				if err != nil {
-					logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("download image error")
-					return
-				}
-				if option, ok := optionMap["name"]; ok {
-					metaStruct.Name = option.StringValue()
-				}
-				if option, ok := optionMap["description"]; ok {
-					metaStruct.Description = option.StringValue()
-				}
-				ipfsClient := ipfs.NewClient(config.GetIpfsConfig().Api)
+			go func() {
+				var imageCid string
+				if _, ok := optionMap["image"]; ok {
+					imageID := optionMap["image"].Value.(string)
+					imageUrl := i.ApplicationCommandData().Resolved.Attachments[imageID].URL
+					resp, err := http.DefaultClient.Get(imageUrl)
+					if err != nil {
+						logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("download image error")
+						return
+					}
+					ipfsClient := ipfs.NewClient(config.GetIpfsConfig().Api)
 
-				imageCid, err = ipfsClient.Add(resp.Body)
-				if err != nil {
-					logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("upload image to ipfs error")
+					imageCid, err = ipfsClient.Add(resp.Body)
+					if err != nil {
+						logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("upload image to ipfs error")
+						return
+					}
+				} else if _, ok := optionMap["prompts"]; ok {
+					descrip := optionMap["prompts"].Value.(string)
+					prompts, err := gradio.Description2Prompts(descrip)
+					if err != nil {
+						logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("Description2Prompts error")
+						return
+					}
+					imageBytes, _, err := gradio.Prompts2Image(prompts)
+					if err != nil {
+						logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("Prompts2Image error")
+						return
+					}
+					ipfsClient := ipfs.NewClient(config.GetIpfsConfig().Api)
+					imageCid, err = ipfsClient.Add(bytes.NewBuffer(imageBytes))
+					if err != nil {
+						logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("upload image to ipfs error")
+						return
+					}
+				} else {
 					return
 				}
-			} else if _, ok := optionMap["prompts"]; ok {
-				descrip := optionMap["prompts"].Value.(string)
-				prompts, err := gradio.Description2Prompts(descrip)
-				if err != nil {
-					logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("Description2Prompts error")
-					return
-				}
-				imageBytes, _, err := gradio.Prompts2Image(prompts)
-				if err != nil {
-					logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("Prompts2Image error")
-					return
-				}
-				ipfsClient := ipfs.NewClient(config.GetIpfsConfig().Api)
-				imageCid, err = ipfsClient.Add(bytes.NewBuffer(imageBytes))
-				if err != nil {
-					logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("upload image to ipfs error")
-					return
-				}
-			} else {
-				return
-			}
 
-			//metaStruct.Image = config.GetIpfsConfig().HttpGateway + imageCid
-			//metaStr, _ := json.Marshal(metaStruct)
-			//cid, err := ipfsClient.Add(strings.NewReader(string(metaStr)))
-			//if err != nil {
-			//	logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("upload ipfs error")
-			//	return
-			//}
-			authorId := ""
-			if i.Member != nil {
-				authorId = i.Member.User.ID
-			} else if i.User != nil {
-				authorId = i.User.ID
-			} else {
-				logger.Logrus.WithFields(logrus.Fields{"discordBody": i}).Error("discord cannot get author id")
-				return
-			}
-			outMsg, err := bot.Handler(InputMessage{
-				App:       bot.App(),
-				AuthorId:  authorId,
-				MessageId: fmt.Sprintf("%s/%s", i.ChannelID, i.ID),
-				Action:    ActionMintNft,
-				Params:    []string{config.GetIpfsConfig().HttpGateway + imageCid},
-			})
-			if err != nil {
-				logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("handle message error")
-			}
-			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				//metaStruct.Image = config.GetIpfsConfig().HttpGateway + imageCid
+				//metaStr, _ := json.Marshal(metaStruct)
+				//cid, err := ipfsClient.Add(strings.NewReader(string(metaStr)))
+				//if err != nil {
+				//	logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("upload ipfs error")
+				//	return
+				//}
+				authorId := ""
+				if i.Member != nil {
+					authorId = i.Member.User.ID
+				} else if i.User != nil {
+					authorId = i.User.ID
+				} else {
+					logger.Logrus.WithFields(logrus.Fields{"discordBody": i}).Error("discord cannot get author id")
+					return
+				}
+				outMsg, err := bot.Handler(InputMessage{
+					App:       bot.App(),
+					AuthorId:  authorId,
+					MessageId: fmt.Sprintf("%s/%s", i.ChannelID, i.ID),
+					Action:    ActionMintNft,
+					Params:    []string{config.GetIpfsConfig().HttpGateway + imageCid},
+				})
+				if err != nil {
+					logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("handle message error")
+					return
+				}
+				discordResp, err := s.InteractionResponse(i.Interaction)
+				if err != nil {
+					logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("get discord interaction response error")
+					return
+				}
+				_, err = s.ChannelMessageEdit(discordResp.ChannelID, discordResp.ID, outMsg.Message)
+				if err != nil {
+					logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("edit discord message error")
+					return
+				}
+
+			}()
+
+			err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Content: outMsg.Message,
+					Content: "Wait a second.I'm processing your request.",
 				},
 			})
 			if err != nil {
@@ -299,4 +302,8 @@ func (bot *DiscordBot) CommandHandler(s *discordgo.Session, i *discordgo.Interac
 	if h, ok := commandHandlers[i.ApplicationCommandData().Name]; ok {
 		h(s, i)
 	}
+}
+
+func editMessage(s *discordgo.Session, channelId string, messageId string, message string) (*discordgo.Message, error) {
+	return s.ChannelMessageEdit(channelId, messageId, message)
 }

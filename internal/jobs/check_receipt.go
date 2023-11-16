@@ -63,7 +63,7 @@ func replyDiscordMessage(discord *discordgo.Session, tokenId string, channelId s
 	}
 	vedioBuffer, err := gradio.Image2Vedio(metaUrl)
 	if err != nil {
-		logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("generate gif error")
+		logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("generate vedio error")
 		return
 	}
 	payloald := discordgo.MessageSend{}
