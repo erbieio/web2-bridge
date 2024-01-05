@@ -80,10 +80,16 @@ type IpfsConfig struct {
 type ChainConfig struct {
 	Rpc          string
 	NftAdminPriv string
+	MaxMint      int
 }
 
 type GradioConfig struct {
 	Url string
+}
+
+type ComfyuiConfig struct {
+	Host string
+	Port int
 }
 
 // struct decode must has tag
@@ -96,6 +102,7 @@ type Config struct {
 	IpfsConf    IpfsConfig    `toml:"IpfsConfig" mapstructure:"IpfsConfig"`
 	ChainConf   ChainConfig   `toml:"ChainConfig" mapstructure:"ChainConfig"`
 	GradioConf  GradioConfig  `toml:"GradioConfig" mapstructure:"GradioConfig"`
+	ComfyuiConf ComfyuiConfig `toml:"ComfyuiConfig" mapstructure:"ComfyuiConfig"`
 }
 
 var (
@@ -213,6 +220,12 @@ func GetGradioConfig() GradioConfig {
 	configMutex.RLock()
 	defer configMutex.RUnlock()
 	return config.GradioConf
+}
+
+func GetComfyuiConfig() ComfyuiConfig {
+	configMutex.RLock()
+	defer configMutex.RUnlock()
+	return config.ComfyuiConf
 }
 
 // check if logout equal file

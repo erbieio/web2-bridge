@@ -25,6 +25,22 @@ import (
 func MessageHandler(in bot.InputMessage) (bot.OutputMessage, error) {
 	if in.IsMintNft() {
 		//owner := common.BytesToAddress(crypto.Keccak256([]byte(in.AuthorId)))
+		var count int64
+		err := mysql.GetDB().Where("creator = ? and mint_status in ?", in.AuthorId, []int{TxStatusSuccess, TxStatusDefault}).Count(&count).Error
+		if err != nil {
+			return bot.OutputMessage{
+				App:     in.App,
+				ReplyTo: in.MessageId,
+				Message: "Mint nft failed due to query error",
+			}, err
+		}
+		if count >= int64(config.GetChainConfig().MaxMint) {
+			return bot.OutputMessage{
+				App:     in.App,
+				ReplyTo: in.MessageId,
+				Message: "mint amount has exceed 10 limit",
+			}, nil
+		}
 		tx, err := MintErbieNft(config.GetChainConfig().Rpc, config.GetChainConfig().NftAdminPriv, in.Params[0])
 		if err != nil {
 			return bot.OutputMessage{

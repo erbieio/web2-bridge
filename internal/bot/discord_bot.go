@@ -3,16 +3,15 @@ package bot
 import (
 	"bytes"
 	"fmt"
-	"net/http"
 	"regexp"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/erbieio/web2-bridge/config"
 	"github.com/erbieio/web2-bridge/internal/model"
+	"github.com/erbieio/web2-bridge/utils/comfyui"
 	"github.com/erbieio/web2-bridge/utils/db/mysql"
 	"github.com/erbieio/web2-bridge/utils/discord"
-	"github.com/erbieio/web2-bridge/utils/gradio"
 	"github.com/erbieio/web2-bridge/utils/ipfs"
 	"github.com/erbieio/web2-bridge/utils/logger"
 	"github.com/sirupsen/logrus"
@@ -43,13 +42,6 @@ func (bot *DiscordBot) Do() error {
 			Name:        "mint_nft",
 			Description: "mint nft on erbie chain",
 			Options: []*discordgo.ApplicationCommandOption{
-
-				{
-					Type:        discordgo.ApplicationCommandOptionAttachment,
-					Name:        "image",
-					Description: "NFT image",
-					Required:    false,
-				},
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
 					Name:        "prompts",
@@ -141,29 +133,9 @@ func (bot *DiscordBot) CommandHandler(s *discordgo.Session, i *discordgo.Interac
 
 			go func() {
 				var imageCid string
-				if _, ok := optionMap["image"]; ok {
-					imageID := optionMap["image"].Value.(string)
-					imageUrl := i.ApplicationCommandData().Resolved.Attachments[imageID].URL
-					resp, err := http.DefaultClient.Get(imageUrl)
-					if err != nil {
-						logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("download image error")
-						return
-					}
-					ipfsClient := ipfs.NewClient(config.GetIpfsConfig().Api)
-
-					imageCid, err = ipfsClient.Add(resp.Body)
-					if err != nil {
-						logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("upload image to ipfs error")
-						return
-					}
-				} else if _, ok := optionMap["prompts"]; ok {
+				if _, ok := optionMap["prompts"]; ok {
 					descrip := optionMap["prompts"].Value.(string)
-					prompts, err := gradio.Description2Prompts(descrip)
-					if err != nil {
-						logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("Description2Prompts error")
-						return
-					}
-					imageBytes, _, err := gradio.Prompts2Image(prompts)
+					imageBytes, _, err := comfyui.Prompts2Image(descrip)
 					if err != nil {
 						logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("Prompts2Image error")
 						return

@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -11,7 +12,6 @@ import (
 	"github.com/erbieio/web2-bridge/internal/model"
 	"github.com/erbieio/web2-bridge/utils/db/mysql"
 	"github.com/erbieio/web2-bridge/utils/discord"
-	"github.com/erbieio/web2-bridge/utils/gradio"
 	"github.com/erbieio/web2-bridge/utils/logger"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -61,19 +61,18 @@ func replyDiscordMessage(discord *discordgo.Session, tokenId string, channelId s
 	if metaUrl == "" {
 		return
 	}
-	logger.Logrus.Info("start image to vedio: " + metaUrl)
-	vedioBuffer, err := gradio.Image2Vedio(metaUrl)
+	resp, err := http.Get(metaUrl)
 	if err != nil {
-		logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("generate vedio error")
+		logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("get nft meta url error")
 		return
 	}
 	payloald := discordgo.MessageSend{}
 	payloald.Content = fmt.Sprintf("<@%s> Your nft id is:%s.Author: <@%s>", creatorId, tokenId, creatorId)
 	payloald.Files = []*discordgo.File{
 		{
-			Name:        "vedio.mp4",
-			ContentType: "mp4",
-			Reader:      vedioBuffer,
+			Name:        "image.png",
+			ContentType: "png",
+			Reader:      resp.Body,
 		},
 	}
 	discord.ChannelMessageSendComplex(channelId, &payloald)

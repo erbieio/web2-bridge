@@ -9,11 +9,13 @@ require (
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/go-sql-driver/mysql v1.7.1
+	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0
 	github.com/ipfs/go-ipfs-api v0.7.0
 	github.com/michimani/gotwi v0.14.0
 	github.com/noelyahan/impexp v0.0.0-20201209034304-ee159d84b42f
 	github.com/noelyahan/mergi v0.0.0-20190514155713-69271a4267fb
 	github.com/noelyahan/mergitrans v0.0.0-20190507035323-73e76dcd7d2a
+	github.com/richinsley/comfy2go v0.2.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/viper v1.17.0
 	github.com/urfave/cli v1.22.14
@@ -44,7 +46,7 @@ require (
 	github.com/frankban/quicktest v1.14.6 // indirect
 	github.com/go-ole/go-ole v1.2.5 // indirect
 	github.com/go-stack/stack v1.8.1 // indirect
-	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
+	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/holiman/uint256 v1.2.3 // indirect

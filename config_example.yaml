@@ -15,5 +15,9 @@ IpfsConfig:
 ChainConfig:
   Rpc: 'https://api.erbie.io/'
   NftAdminPriv: ''
+  MaxMint: 10
 GradioConfig:
   Url: ''
+ComfyuiConfig:
+  Host: 192.168.4.228
+  Port: 3456
