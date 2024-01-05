@@ -1,4 +1,6 @@
-{
+package comfyui
+
+var workflow = `{
   "last_node_id": 27,
   "last_link_id": 54,
   "nodes": [
@@ -554,4 +556,4 @@
   "config": {},
   "extra": {},
   "version": 0.4
-}
+}`

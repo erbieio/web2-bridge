@@ -46,7 +46,7 @@ func (bot *DiscordBot) Do() error {
 					Type:        discordgo.ApplicationCommandOptionString,
 					Name:        "prompts",
 					Description: "image scenarioal description",
-					Required:    false,
+					Required:    true,
 				},
 			},
 		},

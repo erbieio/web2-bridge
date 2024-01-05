@@ -26,7 +26,7 @@ func MessageHandler(in bot.InputMessage) (bot.OutputMessage, error) {
 	if in.IsMintNft() {
 		//owner := common.BytesToAddress(crypto.Keccak256([]byte(in.AuthorId)))
 		var count int64
-		err := mysql.GetDB().Where("creator = ? and mint_status in ?", in.AuthorId, []int{TxStatusSuccess, TxStatusDefault}).Count(&count).Error
+		err := mysql.GetDB().Model(&model.FreeNft{}).Where("creator = ? and mint_status in ?", in.AuthorId, []int{TxStatusSuccess, TxStatusDefault}).Count(&count).Error
 		if err != nil {
 			return bot.OutputMessage{
 				App:     in.App,

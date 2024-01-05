@@ -1,6 +1,7 @@
 package comfyui
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 
@@ -12,7 +13,6 @@ import (
 func Prompts2Image(prompts string) ([]byte, string, error) {
 	clientaddr := config.GetComfyuiConfig().Host
 	clientport := config.GetComfyuiConfig().Port
-	workflow := "txt2img_workflow.json"
 
 	// create a new ComgyGo client
 	c := client.NewComfyClient(clientaddr, clientport, nil)
@@ -27,8 +27,7 @@ func Prompts2Image(prompts string) ([]byte, string, error) {
 		}
 	}
 
-	// create a graph from the png file
-	graph, _, err := c.NewGraphFromJsonFile(workflow)
+	graph, _, err := c.NewGraphFromJsonReader(bytes.NewBufferString(workflow))
 	if err != nil {
 		return nil, "", err
 	}
