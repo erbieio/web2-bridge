@@ -67,7 +67,10 @@ func replyDiscordMessage(discord *discordgo.Session, tokenId string, channelId s
 		return
 	}
 	payloald := discordgo.MessageSend{}
-	payloald.Content = fmt.Sprintf("<@%s> Your nft id is:%s.Author: <@%s>", creatorId, tokenId, creatorId)
+	replyTemplate := `<@%s> ➡️Your NFT ID on the #ErbieChain is：%s
+
+**Discord name of the🔎NFT creator: <@%s>**`
+	payloald.Content = fmt.Sprintf(replyTemplate, creatorId, tokenId, creatorId)
 	payloald.Files = []*discordgo.File{
 		{
 			Name:        "image.png",

@@ -68,10 +68,13 @@ func MessageHandler(in bot.InputMessage) (bot.OutputMessage, error) {
 				Message: "Mint nft failed",
 			}, err
 		}
+		mintTemplate := `✅ Success!📢 **Your mint transaction hash is:** 
+
+➡️ %s`
 		return bot.OutputMessage{
 			App:     in.App,
 			ReplyTo: in.MessageId,
-			Message: "Success!Your mint transaction hash is: " + tx,
+			Message: fmt.Sprintf(mintTemplate, tx),
 		}, nil
 
 	} else if in.IsTransferNft() {
@@ -118,13 +121,16 @@ func MessageHandler(in bot.InputMessage) (bot.OutputMessage, error) {
 				Message: "Transfer nft failed",
 			}, err
 		}
+		transferTemplate := `✅Success! The NFT transaction has been completed.
+
+👇*Your transfer transaction hash is*:
+%s
+		`
 		return bot.OutputMessage{
 			App:     in.App,
 			ReplyTo: in.MessageId,
-			Message: "Success!Your transfer transaction hash is: " + tx,
+			Message: fmt.Sprintf(transferTemplate, tx),
 		}, nil
-
-	} else if in.IsTransferNft() {
 
 	}
 	return bot.OutputMessage{

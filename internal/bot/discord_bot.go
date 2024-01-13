@@ -193,7 +193,7 @@ func (bot *DiscordBot) CommandHandler(s *discordgo.Session, i *discordgo.Interac
 			err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Content: "Wait a second.I'm processing your request.",
+					Content: "⏰Wait a second.⏳I'm processing your request.",
 				},
 			})
 			if err != nil {
@@ -261,11 +261,18 @@ func (bot *DiscordBot) CommandHandler(s *discordgo.Session, i *discordgo.Interac
 			for _, v := range nfts {
 				ownedTokenIds = append(ownedTokenIds, v.TokenId)
 			}
-			tokenIdStr := strings.Join(ownedTokenIds, ",")
+			tokenIdStr := strings.Join(ownedTokenIds, `
+
+`)
+			replyTemplate := `***🗃️ Here are your NFT list on the ErbieChain.***  <@%s>
+
+%s
+			
+**📈 You can initiate transactions using /transfer_nft.**`
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Content: "Your nft list: " + tokenIdStr,
+					Content: fmt.Sprintf(replyTemplate, authorId, tokenIdStr),
 				},
 			})
 
