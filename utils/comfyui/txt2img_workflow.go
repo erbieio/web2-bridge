@@ -335,7 +335,7 @@ var workflow = `{
         "Node name for S&R": "SDTurboScheduler"
       },
       "widgets_values": [
-        1,
+        2,
         1
       ]
     },
