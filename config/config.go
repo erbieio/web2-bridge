@@ -81,6 +81,7 @@ type ChainConfig struct {
 	Rpc          string
 	NftAdminPriv string
 	MaxMint      int
+	WhiteList    []string
 }
 
 type GradioConfig struct {

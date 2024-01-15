@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/rpc"
+	"golang.org/x/exp/slices"
 
 	"github.com/erbieio/web2-bridge/config"
 	"github.com/erbieio/web2-bridge/internal/bot"
@@ -34,7 +35,7 @@ func MessageHandler(in bot.InputMessage) (bot.OutputMessage, error) {
 				Message: "Mint nft failed due to query error",
 			}, err
 		}
-		if count >= int64(config.GetChainConfig().MaxMint) {
+		if count >= int64(config.GetChainConfig().MaxMint) && !slices.Contains(config.GetChainConfig().WhiteList, in.AuthorId) {
 			return bot.OutputMessage{
 				App:     in.App,
 				ReplyTo: in.MessageId,
