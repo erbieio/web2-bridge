@@ -133,17 +133,42 @@ func (bot *DiscordBot) CommandHandler(s *discordgo.Session, i *discordgo.Interac
 
 			go func() {
 				var imageCid string
+				failedTemple := "Your NFT minting failed, please initiate the command again.<@%s>"
+				authorId := ""
+				if i.Member != nil {
+					authorId = i.Member.User.ID
+				} else if i.User != nil {
+					authorId = i.User.ID
+				} else {
+					logger.Logrus.WithFields(logrus.Fields{"discordBody": i}).Error("discord cannot get author id")
+					return
+				}
+				discordResp, err := s.InteractionResponse(i.Interaction)
+				if err != nil {
+					logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("get discord interaction response error")
+					return
+				}
 				if _, ok := optionMap["prompts"]; ok {
 					descrip := optionMap["prompts"].Value.(string)
 					imageBytes, _, err := comfyui.Prompts2Image(descrip)
 					if err != nil {
 						logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("Prompts2Image error")
+						_, err = s.ChannelMessageEdit(discordResp.ChannelID, discordResp.ID, fmt.Sprintf(failedTemple, authorId))
+						if err != nil {
+							logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("edit discord message error")
+							return
+						}
 						return
 					}
 					ipfsClient := ipfs.NewClient(config.GetIpfsConfig().Api)
 					imageCid, err = ipfsClient.Add(bytes.NewBuffer(imageBytes))
 					if err != nil {
 						logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("upload image to ipfs error")
+						_, err = s.ChannelMessageEdit(discordResp.ChannelID, discordResp.ID, fmt.Sprintf(failedTemple, authorId))
+						if err != nil {
+							logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("edit discord message error")
+							return
+						}
 						return
 					}
 				} else {
@@ -157,15 +182,7 @@ func (bot *DiscordBot) CommandHandler(s *discordgo.Session, i *discordgo.Interac
 				//	logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("upload ipfs error")
 				//	return
 				//}
-				authorId := ""
-				if i.Member != nil {
-					authorId = i.Member.User.ID
-				} else if i.User != nil {
-					authorId = i.User.ID
-				} else {
-					logger.Logrus.WithFields(logrus.Fields{"discordBody": i}).Error("discord cannot get author id")
-					return
-				}
+
 				outMsg, err := bot.Handler(InputMessage{
 					App:       bot.App(),
 					AuthorId:  authorId,
@@ -175,11 +192,11 @@ func (bot *DiscordBot) CommandHandler(s *discordgo.Session, i *discordgo.Interac
 				})
 				if err != nil {
 					logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("handle message error")
-					return
-				}
-				discordResp, err := s.InteractionResponse(i.Interaction)
-				if err != nil {
-					logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("get discord interaction response error")
+					_, err = s.ChannelMessageEdit(discordResp.ChannelID, discordResp.ID, fmt.Sprintf(failedTemple, authorId))
+					if err != nil {
+						logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("edit discord message error")
+						return
+					}
 					return
 				}
 				_, err = s.ChannelMessageEdit(discordResp.ChannelID, discordResp.ID, outMsg.Message)
