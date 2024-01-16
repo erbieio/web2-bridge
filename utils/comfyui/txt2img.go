@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"math/rand"
 
 	"github.com/erbieio/web2-bridge/config"
 	"github.com/erbieio/web2-bridge/utils/logger"
@@ -34,6 +35,13 @@ func Prompts2Image(prompts string) ([]byte, string, error) {
 	promptNode := graph.GetNodeById(6)
 	promptNode.WidgetValues = []interface{}{
 		prompts,
+	}
+	sampleNode := graph.GetNodeById(13)
+	sampleNode.WidgetValues = []interface{}{
+		true,
+		rand.Uint32(),
+		"randomize",
+		1,
 	}
 	// queue the prompt and get the resulting image =
 	item, err := c.QueuePrompt(graph)
