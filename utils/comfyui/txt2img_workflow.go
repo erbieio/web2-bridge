@@ -205,7 +205,7 @@ var workflow = `{
       "widgets_values": [
         true,
         0,
-        "fixed",
+        "randomize",
         1
       ]
     },
