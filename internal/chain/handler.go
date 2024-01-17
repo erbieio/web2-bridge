@@ -12,6 +12,8 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"golang.org/x/exp/slices"
 
+	"time"
+
 	"github.com/erbieio/web2-bridge/config"
 	"github.com/erbieio/web2-bridge/internal/bot"
 	"github.com/erbieio/web2-bridge/internal/model"
@@ -23,11 +25,34 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
+var currentKey = time.Now().Format("2006-01-02")
+var userMintCache = make(map[string]int64)
+
+func mintContr(author string) (int64, error) {
+	todayTime := time.Now()
+	today := todayTime.Format("2006-01-02")
+	if today > currentKey {
+		currentKey = today
+		userMintCache = make(map[string]int64)
+	}
+	nextDay := todayTime.AddDate(0, 0, 1).Format("2006-01-02")
+	mintCount, ok := userMintCache[author]
+	if !ok {
+		var count int64
+		err := mysql.GetDB().Model(&model.FreeNft{}).Where("creator = ? and mint_status in ? and created > ? and created < ?", author, []int{TxStatusSuccess, TxStatusDefault}, currentKey, nextDay).Count(&count).Error
+		if err != nil {
+			return 0, err
+		}
+		userMintCache[author] = count
+	}
+	return mintCount, nil
+
+}
+
 func MessageHandler(in bot.InputMessage) (bot.OutputMessage, error) {
 	if in.IsMintNft() {
 		//owner := common.BytesToAddress(crypto.Keccak256([]byte(in.AuthorId)))
-		var count int64
-		err := mysql.GetDB().Model(&model.FreeNft{}).Where("creator = ? and mint_status in ?", in.AuthorId, []int{TxStatusSuccess, TxStatusDefault}).Count(&count).Error
+		count, err := mintContr(in.AuthorId)
 		if err != nil {
 			return bot.OutputMessage{
 				App:     in.App,
@@ -69,6 +94,7 @@ func MessageHandler(in bot.InputMessage) (bot.OutputMessage, error) {
 				Message: "Mint nft failed",
 			}, err
 		}
+		userMintCache[in.AuthorId] += 1
 		mintTemplate := `✅ Success!📢 **Your mint transaction hash is:** 
 
 ➡️ %s`
