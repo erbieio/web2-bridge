@@ -14,6 +14,7 @@ import (
 	"github.com/erbieio/web2-bridge/utils/db/mysql"
 	_ "github.com/erbieio/web2-bridge/utils/db/mysql"
 	"github.com/erbieio/web2-bridge/utils/logger"
+	"github.com/richinsley/comfy2go/client"
 
 	"github.com/urfave/cli"
 )
@@ -74,7 +75,10 @@ func run(cctx *cli.Context) {
 		} */
 
 	botFactory := bot.GetFacotory()
-	botFactory.Register(&bot.DiscordBot{Handler: chain.MessageHandler})
+
+	clientaddr := config.GetComfyuiConfig().Host
+	clientport := config.GetComfyuiConfig().Port
+	botFactory.Register(&bot.DiscordBot{Handler: chain.MessageHandler, Comfyui: client.NewComfyClient(clientaddr, clientport, nil)})
 	botFactory.Do()
 
 	jobs.Do()

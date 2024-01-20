@@ -14,11 +14,13 @@ import (
 	"github.com/erbieio/web2-bridge/utils/discord"
 	"github.com/erbieio/web2-bridge/utils/ipfs"
 	"github.com/erbieio/web2-bridge/utils/logger"
+	"github.com/richinsley/comfy2go/client"
 	"github.com/sirupsen/logrus"
 )
 
 type DiscordBot struct {
 	Handler func(InputMessage) (OutputMessage, error)
+	Comfyui *client.ComfyClient
 }
 
 func (bot *DiscordBot) App() string {
@@ -159,7 +161,7 @@ func (bot *DiscordBot) CommandHandler(s *discordgo.Session, i *discordgo.Interac
 				}
 				if _, ok := optionMap["prompts"]; ok {
 					descrip := optionMap["prompts"].Value.(string)
-					imageBytes, _, err := comfyui.Prompts2Image(descrip)
+					imageBytes, _, err := comfyui.Prompts2Image(bot.Comfyui, descrip)
 					if err != nil {
 						logger.Logrus.WithFields(logrus.Fields{"Error": err}).Error("Prompts2Image error")
 						_, err = s.ChannelMessageEdit(discordResp.ChannelID, discordResp.ID, fmt.Sprintf(failedTemple, authorId))

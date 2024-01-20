@@ -8,6 +8,7 @@ import (
 	"github.com/erbieio/web2-bridge/config"
 	"github.com/erbieio/web2-bridge/utils/comfyui"
 	"github.com/erbieio/web2-bridge/utils/logger"
+	"github.com/richinsley/comfy2go/client"
 )
 
 func TestPrompts2Image(t *testing.T) {
@@ -20,7 +21,10 @@ func TestPrompts2Image(t *testing.T) {
 
 	//load config
 	config.LoadConf(*configPath)
-	imageBytes, ext, err := comfyui.Prompts2Image("A boy")
+	clientaddr := config.GetComfyuiConfig().Host
+	clientport := config.GetComfyuiConfig().Port
+	c := client.NewComfyClient(clientaddr, clientport, nil)
+	imageBytes, ext, err := comfyui.Prompts2Image(c, "A boy")
 	if err != nil {
 		t.Error(err)
 		return

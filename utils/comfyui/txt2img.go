@@ -6,17 +6,11 @@ import (
 	"fmt"
 	"math/rand"
 
-	"github.com/erbieio/web2-bridge/config"
 	"github.com/erbieio/web2-bridge/utils/logger"
 	"github.com/richinsley/comfy2go/client"
 )
 
-func Prompts2Image(prompts string) ([]byte, string, error) {
-	clientaddr := config.GetComfyuiConfig().Host
-	clientport := config.GetComfyuiConfig().Port
-
-	// create a new ComgyGo client
-	c := client.NewComfyClient(clientaddr, clientport, nil)
+func Prompts2Image(c *client.ComfyClient, prompts string) ([]byte, string, error) {
 
 	// the ComgyGo client needs to be in an initialized state before
 	// we can create and queue graphs
