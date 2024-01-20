@@ -17,6 +17,7 @@ func Prompts2Image(prompts string) ([]byte, string, error) {
 
 	// create a new ComgyGo client
 	c := client.NewComfyClient(clientaddr, clientport, nil)
+	defer c.Close()
 
 	// the ComgyGo client needs to be in an initialized state before
 	// we can create and queue graphs
