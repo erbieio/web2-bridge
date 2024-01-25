@@ -274,10 +274,10 @@ func (bot *DiscordBot) CommandHandler(s *discordgo.Session, i *discordgo.Interac
 			for _, opt := range options {
 				optionMap[opt.Name] = opt
 			}
-			var page int64 = 0
+			var page int64 = 1
 			limit := 20
 			if option, ok := optionMap["page"]; ok {
-				page = option.IntValue()
+				page = int64(option.UintValue())
 			}
 
 			offset := 0
@@ -301,7 +301,7 @@ func (bot *DiscordBot) CommandHandler(s *discordgo.Session, i *discordgo.Interac
 				return
 			}
 			nfts := make([]*model.FreeNft, 0)
-			if page*int64(limit) <= count {
+			if (page-1)*int64(limit) <= count {
 				nfts = make([]*model.FreeNft, 0)
 				err := mysql.GetDB().Model(&model.FreeNft{}).Where("creator = ? and mint_status = ? and transfer_status != ?", authorId, model.TxStatusSuccess, model.TxStatusSuccess).Limit(limit).Offset(offset).Find(&nfts).Error
 				if err != nil {
